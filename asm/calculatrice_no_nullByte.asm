@@ -1,7 +1,9 @@
-main:
-    xor eax,eax
-    xor ebx,ebx
-    xor edx,edx
+SECTION .text
+GLOBAL _start
+_start:
+    ;xor eax,eax
+    ;xor ebx,ebx
+    ;xor edx,edx
     mov al, 4
     mov bl, 4
     add eax, ebx
