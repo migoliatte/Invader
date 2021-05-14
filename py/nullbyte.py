@@ -14,7 +14,7 @@ def CheckNullBytes(shellcode):
         
 
 
-name="calcul"
+name="/home/migoliatte/progra/security_shellcode/asm/calculatrice_no_nullByte"
 os.system("nasm -f elf "+name+".asm  && ld "+name+".o -m elf_i386 -o "+name)
 p = subprocess.run('objdump -d '+name,shell=True,stdout=subprocess.PIPE)
 p = p.stdout.decode("utf-8")
