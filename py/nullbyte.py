@@ -6,6 +6,8 @@ import sys
 def help():
     print("<---------- HELP ---------->")
     print("-h Affiche ce méssage")
+    print("-v Active le mode verbosité")
+    print("-vvv Active le mode haute verbosité (objdump)")
     print("-s Création de lu shellcode")
     print("-c compile exploit.c et le lance")
     print("<---------- HELP ---------->")
@@ -14,10 +16,10 @@ def help():
 def recupArgument(verbose):
     print("<---------- Récupération du nom du fichier en cours ---------->")
     name=""
-    if(  len(sys.argv) == 1  ):
+    if(  len(sys.argv) == 2  ):
         name = input("Entrez le nom du fichier .asm  :")
     else:
-        name=str(sys.argv[1])
+        name=str(sys.argv[2])
     file_test=subprocess.run("ls "+name,shell=True,stdout=subprocess.PIPE)
     if( file_test.returncode != 0 ):
         print("Le fichier "+name+" n'existe pas !")
@@ -35,32 +37,39 @@ def objdump(verbose):
         print("Lancement de la commande objdump -d "+name)
     objdump = subprocess.run('objdump -d '+name,shell=True,stdout=subprocess.PIPE)
     objdump = objdump.stdout.decode("utf-8")
-    if(verbose):
+    if(verbose == 3):
         print("Resultat de OBJDUMP :"+objdump)
     objdump=objdump.replace("\t","")
     result=re.findall(":[0-9a-f ]{21}",objdump)
     return result
 
-def CheckNullBytes(verbose,shellcode):
-    print("<---------- Check des NUllsBytes en cours ---------->")
-    NB = False
+def CheckNullBytes(verbose,shellcode,nbrLine):
     for i in range(0, len(shellcode), 2):
         if shellcode[i:i+2] == "00":
-            NB = True
-            print("NullBytes here : " + shellcode[i:i+2])
+            print("Il y a un ou plusieurs NullBytes à la "+str(nbrLine)+"ieme ligne de l'opcode : " + shellcode)
+            return 1
+    return 0
     
-    if NB == False:
-        print("Pas de NullBytes détécté.")
-    else:
-        exit()
 
 def cleanOpCode(verbose):
     resultfinal=[]
+    nbrLine=0
+    nullByte = 0
+
     for res in objdump(verbose):
+        nullByte+=CheckNullBytes(verbose,res,nbrLine)
         resultfinal.append(res[1:].replace(" ",""))
+        nbrLine+=1
+    
+    print("<---------- Check des NUllsBytes en cours ---------->")
+    if nullByte > 0:
+        print("Des NullBytes ont été détécté.")
+    else:
+        print("Aucun NullBytes dans ce shellcode ! ")
+
     print("<---------- Nettoyage de l'opcode en cours ---------->")
     resultfinal="".join(resultfinal)
-    CheckNullBytes(verbose,resultfinal)
+    
     if(verbose):
         print("Opcode nettoyé : "+resultfinal)
     return resultfinal
@@ -71,7 +80,8 @@ def shellcodeCreation(verbose):
     exploit=""
     for i in range(0, len(resultfinal), 2):
         exploit+="\\x"+resultfinal[i:i+2]
-    print("Shellcode : "+exploit)
+    print("Shellcode : ")
+    print(exploit)
     print("Taille de l'exploit : "+str(int(len(resultfinal)/2)))
 
 def lancementCodeC(verbose):
@@ -90,6 +100,8 @@ def menu():
             array[0]=1
         elif str(sys.argv[i]) == "-v":
             array[3]=1
+        elif str(sys.argv[i]) == "-vvv":
+            array[3]=3
         elif str(sys.argv[i]) == "-s":
             array[1]=1
         elif str(sys.argv[i]) == "-c":
