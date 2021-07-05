@@ -49,14 +49,14 @@ def check():
                                 value = "0x0"+value[2]
                             print(value[0:len(value)])
                             file.write("mov "+ test[1][:-1] + ", "+value+"\n dec "+ test[1][:-1]+"\n")
-                        else:
-                            print(line)
-                            value = hex(int(test[2], 16)-1)
-                            if(len(value) == 3):
-                                value = "0x0"+value[2]
-                            print(value[0:len(value)])
-                            file.write("mov "+ test[1][:-1] + ", "+value+"\n inc "+ test[1][:-1]+"\n")
-#return "mov " + val1 + ", 2\ndec " + val1
+                        #else: #il faut rajouter un test pour savoir si ça a été fait ou aps
+                        #    print(line)
+                        #    value = hex(int(test[2], 16)-1)
+                        #    if(len(value) == 3):
+                        #        value = "0x0"+value[2]
+                        #    print(value[0:len(value)])
+                        #    file.write("mov "+ test[1][:-1] + ", "+value+"\n inc "+ test[1][:-1]+"\n")
+#return "mov " + val1 + #", 2\ndec " + val1
 #if num == 2:
 #return "mov " + val1 + ", 1h\ninc " + val1
                     else:
