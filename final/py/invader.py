@@ -1,5 +1,12 @@
+#!/usr/bin/env python3
+### ==============================================================================
+### Created by Migoliatte : https://github.com/migoliatte/Invader.git
+### Automatic creation of a reverse shell (via shellcode) to inject into a program (C example directly available in git). 
+### There is the possibility to change the reverse shell ip and port and make the shell metamorphic and / or polymorphic.
+### ==============================================================================
+
 import subprocess
-import re  # https://regex101.com/
+import re
 import os
 import sys
 import socket
